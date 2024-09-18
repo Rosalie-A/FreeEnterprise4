@@ -1,3 +1,4 @@
+from worlds.ff4fe.FreeEnterpriseForAP.FreeEnt.generate_wiki_tables import items_dbview
 from . import core_rando
 from .crosspolinate import crosspolinate
 from . import databases
@@ -98,13 +99,13 @@ def apply(env):
     plain_chests_dbview = treasure_dbview.get_refined_view(lambda t: t.fight is None)
 
     items_dbview = databases.get_items_dbview()
-    items_dbview.refine(lambda it: it.tier > 0)
-    if env.options.flags.has('treasure_no_j_items'):
-        items_dbview.refine(lambda it: not it.j)
-    if env.options.flags.has('no_adamants'):
-        items_dbview.refine(lambda it: it.const != '#item.AdamantArmor')
-    if env.options.flags.has('no_cursed_rings'):
-        items_dbview.refine(lambda it: it.const != '#item.Cursed')
+    #items_dbview.refine(lambda it: it.tier > 0)
+    #if env.options.flags.has('treasure_no_j_items'):
+    #    items_dbview.refine(lambda it: not it.j)
+    #if env.options.flags.has('no_adamants'):
+    #    items_dbview.refine(lambda it: it.const != '#item.AdamantArmor')
+    #if env.options.flags.has('no_cursed_rings'):
+    #    items_dbview.refine(lambda it: it.const != '#item.Cursed')
 
     maxtier = env.options.flags.get_suffix('Tmaxtier:')
     if maxtier:
@@ -132,6 +133,21 @@ def apply(env):
 
     treasure_assignment = TreasureAssignment(autosells)
 
+    if env.options.ap_data is not None:
+        for t in treasure_dbview:
+            id = t.flag
+            ap_item = env.options.ap_data[str(id)]
+            placement = items_dbview.find_one(lambda i: i.code == ap_item["item_data"]["fe_id"])
+            if placement is None:
+                treasure_assignment.assign(t, '{} gp'.format(10))
+            elif placement.tier <= env.options.ap_data["junk_tier"] and placement.flag != "K":
+                multiplier = (10 if placement.subtype == 'arrow' else 1)
+                divisor = (4 if env.options.flags.has('shops_sell_quarter') else 2)
+                price = max(10, _round_gp(int(placement.price * multiplier / divisor)))
+                treasure_assignment.assign(t, '{} gp'.format(price))
+            else:
+                treasure_assignment.assign(t, placement.const)
+
     fight_chest_locations = ['{} {}'.format(*env.meta['miab_locations'][slot]) for slot in env.meta['miab_locations']]
     fight_treasure_areas = list(set([t.area for t in treasure_dbview.find_all(lambda t: t.fight is not None)]))
     for area in fight_treasure_areas:
@@ -158,7 +174,9 @@ def apply(env):
         for old,new in zip(remapped_original_chests, remapped_new_chests):
             treasure_assignment.remap(old, new)
 
-    if env.options.flags.has('treasure_vanilla'):
+    if env.options.ap_data is not None:
+        pass
+    elif env.options.flags.has('treasure_vanilla'):
         # for various reasons we really do need to assign every treasure chest still
         for t in treasure_dbview:
             if t.fight is None:
@@ -254,25 +272,6 @@ def apply(env):
                 remaining_chests.append(t)
                 area_use_count[t.area] = 0
 
-        for item_const in env.meta['required_treasures']:
-            remaining_count = env.meta['required_treasures'][item_const]
-            while remaining_count > 0:
-                chest = env.rnd.choice(remaining_chests)
-
-                # apply coin flip checks against repeated areas
-                passed_repeat_check = True
-                for i in range(area_use_count[chest.area]):
-                    if env.rnd.random() < 0.7:
-                        passed_repeat_check = False
-                        break
-                if not passed_repeat_check:
-                    continue
-
-                remaining_chests.remove(chest)
-                treasure_assignment.assign(chest, item_const)
-                remaining_count -= 1
-                area_use_count[chest.area] += 1
-
 
     # map the fight treasures to the rewards table
     for chest_slot in core_rando.CHEST_ITEM_SLOTS:
@@ -280,11 +279,19 @@ def apply(env):
         orig_chest_number = core_rando.CHEST_NUMBERS[chest_slot]
         reward_slot_name =  f'#reward_slot.{chest_slot.name}'
         orig_chest = treasure_dbview.find_one(lambda t: t.map == orig_chest_number[0] and t.index == orig_chest_number[1])
+        new_chest = treasure_dbview.find_one(lambda t: t.map == chest_number[0] and t.index == chest_number[1])
+        id = new_chest.flag
+        ap_item = env.options.ap_data[str(id)]
+        placement = items_dbview.find_one(lambda i: i.code == ap_item["item_data"]["fe_id"])
+        if placement is None:
+            env.assignments[reward_slot_name] = "#item.Cure1"
+        else:
+            env.assignments[reward_slot_name] = placement.const
         treasure_assignment.assign(
-            '{} {}'.format(chest_number[0], chest_number[1]), 
-            reward_slot_name, 
+            '{} {}'.format(chest_number[0], chest_number[1]),
+            reward_slot_name,
             orig_chest.fight,
-            remap = False)
+            remap=False)
 
     env.add_script(treasure_assignment.get_script())
 

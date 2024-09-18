@@ -1,4 +1,4 @@
-import databases
+from . import databases
 
 items_dbview = databases.get_items_dbview()
 
@@ -26,7 +26,7 @@ for item in items_dbview:
         notes.append("not in treasure chests, except in ''Twild''")
     note = '; '.join(notes)
 
-    print(f"| {name} | {tier} | {price} | {j_exclusive} | {note} |")
+    #print(f"| {name} | {tier} | {price} | {j_exclusive} | {note} |")
 
 print()
 curves_dbview = databases.get_curves_dbview()
@@ -35,4 +35,4 @@ curves = sorted(curves_dbview.find_all(), key=lambda c: c.wikiindex)
 for curve in curves:
     parts = [ curve.wikiname ]
     parts.extend([str(getattr(curve, f'tier{i}')) for i in range(1,9)])
-    print('| ' + ' | '.join(parts) + ' |')
+    #print('| ' + ' | '.join(parts) + ' |')

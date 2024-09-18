@@ -359,7 +359,7 @@ if __name__ == '__main__':
                     highlight_count += 1
                     output += output.replace(highlight, highlight + '                   <<<<<<<<<<<<<<<<<<')
 
-        print(output)
+        #print(output)
 
     if args.highlight:
         print(f"Highlight count: {highlight_count}")

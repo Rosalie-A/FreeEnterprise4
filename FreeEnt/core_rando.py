@@ -380,10 +380,10 @@ def apply(env):
     keyitem_assigner.item_tier(3).set_max_slot_bucket(2)
 
     keyitem_assigner.slot_tier(0).extend(ITEM_SLOTS)
-    if env.options.flags.has('no_free_key_item'):
-        keyitem_assigner.slot_tier(0).remove(RewardSlot.toroia_hospital_item)
-    else:
-        keyitem_assigner.slot_tier(0).remove(RewardSlot.rydias_mom_item)
+    #if env.options.flags.has('no_free_key_item'):
+    #    keyitem_assigner.slot_tier(0).remove(RewardSlot.toroia_hospital_item)
+    #else:
+    #    keyitem_assigner.slot_tier(0).remove(RewardSlot.rydias_mom_item)
 
     keyitem_assigner.item_tier(1).extend(ESSENTIAL_KEY_ITEMS)
     keyitem_assigner.item_tier(2).extend(NONESSENTIAL_KEY_ITEMS)
@@ -456,7 +456,8 @@ def apply(env):
         keyitem_assigner.slot_tier(1).extend(good_miabs)
         keyitem_assigner.slot_tier(3).extend(bad_miabs)
     else:
-        keyitem_assigner.slot_tier(3).extend(CHEST_ITEM_SLOTS)
+        pass
+        #keyitem_assigner.slot_tier(3).extend(CHEST_ITEM_SLOTS)
     
 
     if env.options.flags.has('pass_in_key_items'):
@@ -486,7 +487,37 @@ def apply(env):
         rewards_assignment = RewardsAssignment()
 
         # assign key items
-        if env.options.flags.has('key_items_vanilla'):
+        if env.options.ap_data is not None:
+            for slot in RewardSlot:
+                skip_list = [0x5A, 0x5D, 0x5F, 0x60]
+                if slot == RewardSlot.feymarch_item:
+                    id = 0x13D
+                elif slot == RewardSlot.lunar_boss_4_item_1:
+                    id = 0x19F
+                elif slot == RewardSlot.lunar_boss_4_item_2:
+                    id = 0x1A0
+                elif slot < 0x20 or slot in skip_list:
+                    continue  # not doing characters here
+                elif slot >= 0x3C and slot <= 0x58:
+                    id = treasure_dbview.find_one(
+                        lambda t: t.map == CHEST_NUMBERS[slot][0] and
+                                  t.index == CHEST_NUMBERS[slot][1]).flag
+                else:
+                    id = slot + 0x200
+                if int(id) == 0x25B and env.options.flags.has('objective_mode_classicforge'):
+                    continue
+                try:
+                    ap_item = env.options.ap_data[str(id)]
+                    placement = items_dbview.find_one(lambda i: i.code == ap_item["item_data"]["fe_id"])
+                except KeyError:
+                    placement = None
+                if placement is None:
+                    reward = ItemReward("#item.Cure1")
+                else:
+                    reward = ItemReward(placement.const)
+                rewards_assignment[slot] = reward
+            found_valid_assignment = True
+        elif env.options.flags.has('key_items_vanilla'):
             # vanilla assignment
             rewards_assignment[RewardSlot.fabul_item] = ItemReward('#item.BlackSword')
             rewards_assignment[RewardSlot.baron_castle_item] = (ItemReward('#item.Pass') if env.options.flags.has('pass_in_key_items') else EmptyReward())
@@ -523,6 +554,8 @@ def apply(env):
         # assign bosses
         if not env.options.flags.has('bosses_vanilla'):
             env.rnd.shuffle(bosses)
+            while bosses[len(bosses) - 1] in env.meta["objective_required_bosses"]:
+                env.rnd.shuffle(bosses)
             for i,k in enumerate(assignable_boss_slots):
                 boss_assignment[k] = bosses[i]
 
@@ -547,7 +580,6 @@ def apply(env):
 
             if not set(env.meta['objective_required_bosses']).issubset(used_bosses):
                 raise Exception("Objective required boss is not present in vanilla boss assignment.")
-
         if DEBUG:
             print('assignment {}:'.format(attempts))
             for k in rewards_assignment:
@@ -599,14 +631,8 @@ def apply(env):
         # make sure key items are all obtainable
         if DEBUG:
             print('testing reachability')
-        tests = keyitem_assigner.item_tier(0).items + keyitem_assigner.item_tier(1).items
-        tests = [reward.item for reward in tests]
-        if env.options.flags.has('key_items_vanilla'):
-            if '#item.Crystal' in tests:
-                tests.remove('#item.Crystal')
-
-        if env.options.flags.has('no_free_key_item'):
-            tests.append('dmist')
+        tests = []
+        tests.append('dmist')
 
         underground_path_disallowed = []
         if not env.options.flags.has('bosses_vanilla') and not env.options.flags.has('bosses_unsafe'):
@@ -625,20 +651,11 @@ def apply(env):
 
             underground_path_disallowed.extend(mean_bosses)
 
-        if not env.options.flags.has('key_items_vanilla') and not unsafe:
-            # must be able to access underground without accessing moon
-            underground_path_disallowed.append('moon')
-        
-        if underground_path_disallowed:
-            tests.append(['underground', underground_path_disallowed])
-
-        if env.options.flags.has('key_items_force_hook'):
-            tests.append(['#item.Magma', [], 'underground'])
-
         # must be able to encounter all bosses required of forced objective flags
         tests.extend(env.meta.get('objective_required_bosses', []))
 
         found_valid_assignment = True
+        break
         for test in tests:
             if type(test) is list:
                 if len(test) == 3:
@@ -718,10 +735,6 @@ def apply(env):
         curves_dbview = databases.get_curves_dbview()
 
         unassigned_quest_slots = [slot for slot in (list(ITEM_SLOTS) + list(SUMMON_QUEST_SLOTS) + list(MOON_BOSS_SLOTS)) if slot not in rewards_assignment]
-        if env.options.flags.has('no_free_key_item'):
-            unassigned_quest_slots.remove(RewardSlot.toroia_hospital_item)
-        else:
-            unassigned_quest_slots.remove(RewardSlot.rydias_mom_item)
 
         if env.options.flags.has('treasure_standard') or env.options.flags.has('treasure_wild'):
             src_pool = items_dbview.find_all(lambda it: it.tier in [6, 7, 8])
@@ -830,6 +843,13 @@ def apply(env):
         for area in areas:
             new_chests = env.rnd.sample(treasure_dbview.find_all(lambda t: t.area == area), len(areas[area]))
             for i,slot in enumerate(areas[area]):
+                id = new_chests[i].flag
+                ap_item = env.options.ap_data[str(id)]
+                placement = items_dbview.find_one(lambda i: i.code == ap_item["item_data"]["fe_id"])
+                if placement is None:
+                    rewards_assignment[slot] = ItemReward("#item.Cure1")
+                else:
+                    rewards_assignment[slot] = ItemReward(placement.const)
                 env.meta['miab_locations'][slot] = [new_chests[i].map, new_chests[i].index]
 
     # hacky cleanup step for _1 and _2 suffixes, and build key item metadata for random objectives
@@ -853,12 +873,13 @@ def apply(env):
     if env.meta.get('has_objectives', False) and env.meta.get('zeromus_required', True):
         rewards_assignment[RewardSlot.fixed_crystal] = KeyItemReward('#item.Crystal')
 
-    if env.options.flags.has('no_adamants'):
-        items = items_dbview.find_all(lambda it: it.tier in [7, 8])
-        pink_tail_item = env.rnd.choice(items)
-        rewards_assignment[RewardSlot.pink_trade_item] = ItemReward(pink_tail_item.const)
-    else:
-        rewards_assignment[RewardSlot.pink_trade_item] = ItemReward('#item.AdamantArmor')
+    #if env.options.flags.has('no_adamants'):
+    #    items = items_dbview.find_all(lambda it: it.tier in [7, 8])
+    #    pink_tail_item = env.rnd.choice(items)
+    #    rewards_assignment[RewardSlot.pink_trade_item] = ItemReward(pink_tail_item.const)
+    #else:
+    #    rewards_assignment[RewardSlot.pink_trade_item] = ItemReward(pink_tail_item.const)
+        #rewards_assignment[RewardSlot.pink_trade_item] = ItemReward('#item.AdamantArmor')
 
     # for now, assign flat character positions
     rewards_assignment[RewardSlot.starting_character] = AxtorReward('#actor.DKCecil')
@@ -919,10 +940,6 @@ def apply(env):
         potential_key_item_slots = [s for s in range(RewardSlot.MAX_COUNT) if s in rewards_assignment and isinstance(rewards_assignment[s], ItemReward) and rewards_assignment[s].is_key]
     else:
         potential_key_item_slots = list(ITEM_SLOTS)
-        if env.options.flags.has('no_free_key_item'):
-            potential_key_item_slots.remove(RewardSlot.toroia_hospital_item)
-        else:
-            potential_key_item_slots.remove(RewardSlot.rydias_mom_item)
         if env.options.flags.has('key_items_in_summon_quests'):
             potential_key_item_slots.extend(SUMMON_QUEST_SLOTS)
         if env.options.flags.has('key_items_in_moon_bosses'):
@@ -931,7 +948,7 @@ def apply(env):
             potential_key_item_slots.extend(CHEST_ITEM_SLOTS)
 
     env.add_binary(BusAddress(0x21dc00), [1 if s in potential_key_item_slots else 0 for s in range(RewardSlot.MAX_COUNT)], as_script=True)
-    env.add_substitution('randomizer key item count', '{:02X}'.format(rewards_assignment.count_key_items()))
+    env.add_substitution('randomizer key item count', '{:02X}'.format(17))
 
     # setup objectives reference table, and create boss metadata for random objectives purposes
     boss_objective_consts = []

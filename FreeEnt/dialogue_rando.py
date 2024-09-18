@@ -1,12 +1,13 @@
+import pkgutil
 import re
 import csv
 import os
 
 from .flatfilecache import FlatFileCache
 
-TEXT_DB_PATH = os.path.join(os.path.dirname(__file__), 'assets', 'db', 'text_db.csv')
-OCCUPATIONS_PATH = os.path.join(os.path.dirname(__file__), 'assets', 'db', 'occupations.txt')
-ZEROMUS_WIN_GAME_PATH = os.path.join(os.path.dirname(__file__), 'assets', 'db', 'zeromus_win_game.txt')
+TEXT_DB_PATH = os.path.join('assets', 'db', 'text_db.csv')
+OCCUPATIONS_PATH = os.path.join('assets', 'db', 'occupations.txt')
+ZEROMUS_WIN_GAME_PATH = os.path.join('assets', 'db', 'zeromus_win_game.txt')
 
 class MapMessage:
     def __init__(self):
@@ -141,41 +142,41 @@ def apply(env):
     else:
         map_messages = []
 
-        with open(TEXT_DB_PATH, 'r') as infile:
-            reader = csv.reader(infile)
+        infile = pkgutil.get_data(__name__, TEXT_DB_PATH).decode().splitlines()
+        reader = csv.reader(infile)
 
-            header_row = next(reader)
-            idx = {header_row[i].lower() : i for i in range(len(header_row)) if header_row[i]}
+        header_row = next(reader)
+        idx = {header_row[i].lower() : i for i in range(len(header_row)) if header_row[i]}
 
-            while True:
-                try:
-                    row = next(reader)
-                except StopIteration:
-                    break
+        while True:
+            try:
+                row = next(reader)
+            except StopIteration:
+                break
 
-                msg_type = row[idx['type']].strip()
-                msg_text = row[idx['text']].strip()
+            msg_type = row[idx['type']].strip()
+            msg_text = row[idx['text']].strip()
 
-                if msg_type == 'training':
-                    continue
+            if msg_type == 'training':
+                continue
 
-                msg = MapMessage()
-                msg.area = row[idx['area']]
-                msg.map = row[idx['map']]
-                msg.number = int(row[idx['index']][2:], 16)
+            msg = MapMessage()
+            msg.area = row[idx['area']]
+            msg.map = row[idx['map']]
+            msg.number = int(row[idx['index']][2:], 16)
 
-                if msg_type == 'unused':
-                    msg.text = 'x'
-                elif msg_text:
-                    msg.text = msg_text
+            if msg_type == 'unused':
+                msg.text = 'x'
+            elif msg_text:
+                msg.text = msg_text
                     
-                map_messages.append(msg)
+            map_messages.append(msg)
 
-        with open(OCCUPATIONS_PATH, 'r') as infile:
-            occupations = [line.strip() for line in infile if line.strip()]
+        infile = pkgutil.get_data(__name__, OCCUPATIONS_PATH).decode().splitlines()
+        occupations = [line.strip() for line in infile if line.strip()]
         
-        with open(ZEROMUS_WIN_GAME_PATH, 'r') as infile:
-            zeromus_win_game = [line.strip() for line in infile if line.strip()]
+        infile = pkgutil.get_data(__name__, ZEROMUS_WIN_GAME_PATH).decode().splitlines()
+        zeromus_win_game = [line.strip() for line in infile if line.strip()]
 
         if cache:
             cache.save(
