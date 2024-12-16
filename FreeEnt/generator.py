@@ -14,7 +14,7 @@ import datetime
 import uuid
 import enum
 
-from .. import pyaes
+import pyaes
 
 from .. import f4c
 
@@ -156,6 +156,7 @@ F4C_FILES = '''
     scripts/extra_item_descriptions.f4c
     scripts/stats.f4c
     scripts/level_up_summary.f4c
+    scripts/treasure_ap.f4c
     scripts/treasure_discard.f4c
     scripts/config_init.f4c
     scripts/shadow_party.f4c
@@ -246,15 +247,15 @@ class Environment:
         self._rewards = rewards.RewardsAssignment()
         self._spoilers = spoilers.SpoilerLog()
 
-        numeric_seed = int(hashlib.sha1(options.seed.encode('utf-8')).hexdigest(), 16)
-        numeric_seed += int(hashlib.sha1(options.flags.to_string().encode('utf-8')).hexdigest(), 16)
-        numeric_seed += int(hashlib.sha1(options.get_version_str().encode('utf-8')).hexdigest(), 16)
+        numeric_seed = int(hashlib.sha256(options.seed.encode('utf-8')).hexdigest(), 16)
+        numeric_seed += int(hashlib.sha256(options.flags.to_string().encode('utf-8')).hexdigest(), 16)
+        numeric_seed += int(hashlib.sha256(options.get_version_str().encode('utf-8')).hexdigest(), 16)
         if (options.test_settings or options.hide_flags) and not (options.debug):
-            numeric_seed += int(hashlib.sha1(str(uuid.uuid4()).encode('utf-8')).hexdigest(), 16)
+            numeric_seed += int(hashlib.sha256(str(uuid.uuid4()).encode('utf-8')).hexdigest(), 16)
         elif options.flags.get_list(r'^-spoil:'):
-            numeric_seed += int(hashlib.sha1(os.getenv('FE_SPOILER_SALT').encode('utf-8')).hexdigest(), 16)
+            numeric_seed += int(hashlib.sha256(os.getenv('FE_SPOILER_SALT').encode('utf-8')).hexdigest(), 16)
         else:
-            numeric_seed += int(hashlib.sha1('FE_SALT'.encode("utf-8")).hexdigest(), 16)
+            numeric_seed += int(hashlib.sha256('FE_SALT'.encode("utf-8")).hexdigest(), 16)
 
         self._rnd_seed = numeric_seed
         
@@ -557,6 +558,9 @@ def build(romfile, options, force_recompile=False):
 
     formatted_flags = (env.options.flags.to_string(pretty=True, wrap_width=68).replace('\n', '\n            '))
 
+    from .text_banks import text_pointer_list
+    env.meta["text_pointers"] = text_pointer_list
+
     env.spoilers.add_raw(
         f"VERSION:    {env.options.get_version_str()}",
         '',
@@ -644,25 +648,31 @@ def build(romfile, options, force_recompile=False):
             method(env)
 
     if not options.flags.has('vanilla_z') or options.flags.has('vintage'):
-        ZEROMUS_PICS_DIR = os.path.join('compiled_zeromus_pics')
-        if not options.flags.has('vanilla_z'):
-            z_asset = select_from_catalog(os.path.join(ZEROMUS_PICS_DIR, 'catalog'), env)
-            if options.flags.has('vintage'):
-                z_asset += '.vintage'
-            z_asset += '.asset'
-        else:
-            z_asset = 'ZeromNES.png.f4c'
-        infile = pkgutil.get_data(__name__, ZEROMUS_PICS_DIR + "/" + z_asset).decode()
-        zeromus_sprite_script = infile
-        env.add_scripts('// [[[ ZEROMUS SPRITE START ]]]\n' + zeromus_sprite_script + '\n// [[[ ZEROMUS SPRITE END ]]]\n')
+        try:
+            ZEROMUS_PICS_DIR = os.path.join('compiled_zeromus_pics')
+            if not options.flags.has('vanilla_z'):
+                z_asset = select_from_catalog(os.path.join(ZEROMUS_PICS_DIR, 'catalog'), env)
+                if options.flags.has('vintage'):
+                    z_asset += '.vintage'
+                z_asset += '.asset'
+            else:
+                z_asset = 'ZeromNES.png.f4c'
+            infile = pkgutil.get_data(__name__, ZEROMUS_PICS_DIR + "/" + z_asset).decode()
+            zeromus_sprite_script = infile
+            env.add_scripts('// [[[ ZEROMUS SPRITE START ]]]\n' + zeromus_sprite_script + '\n// [[[ ZEROMUS SPRITE END ]]]\n')
+        except:
+            pass
 
-    env.add_file('scripts/midiharp.f4c')
-    HARP_SONGS_DIR = os.path.join('compiled_songs')
-    song_asset = select_from_catalog(os.path.join(HARP_SONGS_DIR, 'catalog'), env) + '.asset'
-    env.add_substitution('midiharp default credits', '')
-    infile = pkgutil.get_data(__name__, HARP_SONGS_DIR + "/" + song_asset).decode()
-    harp_script = infile
-    env.add_scripts('// [[[ HARP START ]]]\n' + harp_script + '\n// [[[ HARP END ]]]\n')
+    try:
+        HARP_SONGS_DIR = os.path.join('compiled_songs')
+        song_asset = select_from_catalog(os.path.join(HARP_SONGS_DIR, 'catalog'), env) + '.asset'
+        env.add_substitution('midiharp default credits', '')
+        infile = pkgutil.get_data(__name__, HARP_SONGS_DIR + "/" + song_asset).decode()
+        harp_script = infile
+        env.add_scripts('// [[[ HARP START ]]]\n' + harp_script + '\n// [[[ HARP END ]]]\n')
+        env.add_file('scripts/midiharp.f4c')
+    except:
+        pass
 
     # hack: add a block area to insert default names in rescript.py
     env.add_scripts('// [[[ NAMES START ]]]\n// [[[ NAMES END ]]]')
