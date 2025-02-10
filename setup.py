@@ -3,5 +3,6 @@ from setuptools import setup  # type: ignore
 
 if __name__ == "__main__":
     setup(packages=[
-        "FreeEnt"
+        "FreeEnt",
+        "FreeEnt.f4c"
     ], use_scm_version=True)
