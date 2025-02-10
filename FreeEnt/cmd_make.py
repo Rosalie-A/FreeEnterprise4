@@ -2,7 +2,7 @@ import os
 import json
 import tempfile
 
-from .. import FreeEnt
+from .generator import Generator
 from .cli_command import CLICommand
 
 class MakeCommand(CLICommand):
@@ -23,7 +23,7 @@ class MakeCommand(CLICommand):
         parser.add_argument('--spoileronly', action='store_true')
 
     def execute(self, args):
-        generator = FreeEnt.Generator()
+        generator = Generator()
         options = generator.options
         options.debug = args.debug
         options.quickstart = args.quickstart
