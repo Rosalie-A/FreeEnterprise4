@@ -3,5 +3,5 @@ from setuptools import setup  # type: ignore
 
 if __name__ == "__main__":
     setup(packages=[
-        "FreeEnterprise4"
+        "FreeEnt"
     ], use_scm_version=True)
