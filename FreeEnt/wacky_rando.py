@@ -64,9 +64,10 @@ def apply(env):
         env.add_file('scripts/wacky/wacky_common.f4c')
 
         # apply script of the same name, if it exists
-        script_filename = f'scripts/wacky/{wacky_challenge}.f4c'
-        if pkgutil.get_data(__name__, script_filename) is not None:
-            env.add_file(script_filename)
+        if wacky_challenge not in ["mysteryjuice", "neatfreak"]:
+            script_filename = f'scripts/wacky/{wacky_challenge}.f4c'
+            if pkgutil.get_data(__name__, script_filename) is not None:
+                env.add_file(script_filename)
 
         apply_func = globals().get(f'apply_{wacky_challenge}', None)
         if apply_func:

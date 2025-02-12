@@ -1,3 +1,4 @@
+import logging
 import pkgutil
 import sys
 import os
@@ -192,6 +193,8 @@ BINARY_PATCHES = {
     0x117000 : 'binary_patches/standing_characters.bin',
     0x10da00 : 'assets/encounters/formation_average_levels.bin',
 }
+
+logger = logging.getLogger(__name__)
 
 class Generator:
     def __init__(self, options=None):
@@ -648,28 +651,32 @@ def build(romfile, options, force_recompile=False):
 
     if not options.flags.has('vanilla_z') or options.flags.has('vintage'):
         try:
+            logger.info("Getting Z Sprite from file.")
             ZEROMUS_PICS_DIR = os.path.join(options.ap_data["data_dir"], "zsprite")
             files = [file for file in os.listdir(ZEROMUS_PICS_DIR) if file.endswith(".asset") and "vintage" not in file]
             z_asset = env.rnd.choice(files)
             infile = os.path.join(ZEROMUS_PICS_DIR, z_asset)
             with open(infile) as file:
+                logger.info(f"Got Z Sprite {infile}.")
                 zeromus_sprite_script = file.read()
                 env.add_scripts('// [[[ ZEROMUS SPRITE START ]]]\n' + zeromus_sprite_script + '\n// [[[ ZEROMUS SPRITE END ]]]\n')
         except:
-            pass
+            logger.info("Failed to get Z Sprite from file.")
 
     try:
+        logger.info("Getting Harp Song from file")
         HARP_SONGS_DIR = os.path.join(options.ap_data["data_dir"], "harp")
         files = [file for file in os.listdir(HARP_SONGS_DIR) if file.endswith(".asset")]
         harp_song = env.rnd.choice(files)
         env.add_substitution('midiharp default credits', '')
         infile = os.path.join(HARP_SONGS_DIR, harp_song)
         with open(infile) as file:
+            logger.info(f"Got Harp Song from {infile}.")
             harp_script = file.read()
             env.add_scripts('// [[[ HARP START ]]]\n' + harp_script + '\n// [[[ HARP END ]]]\n')
             env.add_file('scripts/midiharp.f4c')
     except:
-            pass
+            logger.info("Failed to get Harp Song from file,")
 
     # hack: add a block area to insert default names in rescript.py
     env.add_scripts('// [[[ NAMES START ]]]\n// [[[ NAMES END ]]]')
