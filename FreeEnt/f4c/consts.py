@@ -2,8 +2,7 @@ import os,inspect
 import pathlib
 import pkgutil
 
-import lark
-import Utils
+from . import lark
 
 _ROOT_FAMILY = "__"
 _consts = {}
@@ -21,7 +20,7 @@ _parser = lark.Lark(r'''
 
     %import common.WS
     %ignore WS
-    ''', import_paths=[Utils.user_path("data", "ff4fe")])
+    ''', import_paths=[os.path.join(os.path.abspath(os.path.dirname(__file__)), "lark/grammars")])
 
 class ConstsTransformer(lark.Transformer):
     def hex_value(self, n):

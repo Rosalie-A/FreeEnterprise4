@@ -9,10 +9,10 @@ import Utils
 
 try:
     from . import ff4struct
-    import lark
+    from . import lark
 except ImportError:
     import ff4struct
-    import lark
+    from . import lark
 
 _msf_parser = None
 _expr_transformer = None
@@ -56,7 +56,8 @@ def _load_parser():
     global _msf_parser
     if _msf_parser is None:
         infile = pkgutil.get_data(__name__, "grammar_myselfpatch.lark").decode("utf-8")
-        _msf_parser = lark.Lark(infile, maybe_placeholders=False, import_paths=[Utils.user_path("data", "ff4fe")])
+        _msf_parser = lark.Lark(infile, maybe_placeholders=False, 
+            import_paths=[os.path.join(os.path.abspath(os.path.dirname(__file__)), "lark/grammars")])
 
     global _expr_transformer
     if _expr_transformer is None:
