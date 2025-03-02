@@ -657,7 +657,7 @@ def build(romfile, options, force_recompile=False):
             z_asset = env.rnd.choice(files)
             infile = os.path.join(ZEROMUS_PICS_DIR, z_asset)
             with open(infile) as file:
-                logger.info(f"Got Z Sprite {infile}.")
+                logger.info(f"Got Z Sprite from {infile}.")
                 zeromus_sprite_script = file.read()
                 env.add_scripts('// [[[ ZEROMUS SPRITE START ]]]\n' + zeromus_sprite_script + '\n// [[[ ZEROMUS SPRITE END ]]]\n')
         except:

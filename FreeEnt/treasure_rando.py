@@ -156,7 +156,7 @@ def apply(env):
             # If we don't have an FF4 item to place, it's an AP item, so we make the chest secretly a 0 GP box.
             if placement is None:
                 treasure_assignment.assign(t, '{} gp'.format(0))
-            elif placement.tier <= env.options.ap_data["junk_tier"] and placement.flag != "K":
+            elif check_junk_items(ap_item["item_data"]["name"], placement):
                 multiplier = (10 if placement.subtype == 'arrow' else 1)
                 divisor = (4 if env.options.flags.has('shops_sell_quarter') else 2)
                 price = max(10, _round_gp(int(placement.price * multiplier / divisor)))
