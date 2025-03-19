@@ -135,7 +135,8 @@ def apply(env):
         assignable_slots.extend(FREE_SLOTS)
 
     if env.options.flags.has('objective_mode_classicgiant'):
-        assignable_slots.remove('kain3_slot')
+        if 'kain3_slot' in assignable_slots:
+            assignable_slots.remove('kain3_slot')
 
     env.add_substitution('randomizer character count', '{:02X}'.format(len(assignable_slots)))
 

@@ -37,10 +37,10 @@ _items_db = csvdb.CsvDb(pkgutil.get_data(__name__, 'assets/db/items.csvdb').deco
     'equip' : csvdb.List(',')
     })
 
-_shops_db = csvdb.CsvDb(pkgutil.get_data(__name__, 'assets/db/shops.csvdb').decode().splitlines(), {
+_shops_db = csvdb.CsvDb(pkgutil.get_data(__name__, 'assets/db/shops.csvdb').decode().splitlines(keepends=True), {
     'id' : csvdb.HexInt,
-    'manifest' : csvdb.List('\n', filter_func=str.strip),
-    'jmanifest' : csvdb.List('\n', filter_func=str.strip)
+    'manifest' : csvdb.List('\r\n', filter_func=str.strip),
+    'jmanifest' : csvdb.List('\r\n', filter_func=str.strip)
     })
 
 _spells_db = csvdb.CsvDb(pkgutil.get_data(__name__, 'assets/db/spells.csvdb').decode().splitlines(), {

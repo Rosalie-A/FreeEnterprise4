@@ -653,9 +653,12 @@ def build(romfile, options, force_recompile=False):
         try:
             logger.info("Getting Z Sprite from file.")
             ZEROMUS_PICS_DIR = os.path.join(options.ap_data["data_dir"], "zsprite")
+            logger.info(f"Attempting to load Z Sprites from {ZEROMUS_PICS_DIR}")
             files = [file for file in os.listdir(ZEROMUS_PICS_DIR) if file.endswith(".asset") and "vintage" not in file]
+            logger.info(f"Found {len(files)} valid files")
             z_asset = env.rnd.choice(files)
             infile = os.path.join(ZEROMUS_PICS_DIR, z_asset)
+            logger.info(f"Loading Z Sprite from {infile}")
             with open(infile) as file:
                 logger.info(f"Got Z Sprite from {infile}.")
                 zeromus_sprite_script = file.read()
@@ -666,10 +669,13 @@ def build(romfile, options, force_recompile=False):
     try:
         logger.info("Getting Harp Song from file")
         HARP_SONGS_DIR = os.path.join(options.ap_data["data_dir"], "harp")
+        logger.info(f"Attempting to load Harp Songs from {HARP_SONGS_DIR}")
         files = [file for file in os.listdir(HARP_SONGS_DIR) if file.endswith(".asset")]
+        logger.info(f"Found {len(files)} valid files")
         harp_song = env.rnd.choice(files)
         env.add_substitution('midiharp default credits', '')
         infile = os.path.join(HARP_SONGS_DIR, harp_song)
+        logger.info(f"Loading Harp Song from {infile}")
         with open(infile) as file:
             logger.info(f"Got Harp Song from {infile}.")
             harp_script = file.read()
